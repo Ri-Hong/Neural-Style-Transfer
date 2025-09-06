@@ -1,0 +1,10 @@
+# Transformer network architecture configuration
+num_residual_blocks: 5
+num_channels: 32
+norm_type: "instance"  # instance normalization
+activation: "relu"
+padding_type: "reflect"
+
+# Input/Output settings
+input_nc: 3  # RGB input
+output_nc: 3  # RGB output
