@@ -138,6 +138,13 @@ def gram_matrix(tensor):
     Returns:
         torch.Tensor: Gram matrix of shape (batch_size, channels, channels)
     """
+    if tensor.is_cuda:
+        try:
+            import gram_cuda
+            return gram_cuda.gram_matrix_cuda(tensor)
+        except ImportError:
+            print("CUDA extension not found, falling back to PyTorch implementation")
+    
     batch_size, channels, height, width = tensor.size()
     
     # Reshape tensor to 2D matrix

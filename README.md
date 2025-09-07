@@ -22,7 +22,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 2. Install dependencies:
 
 ```bash
-pip install -r requirements.txt
+3
 ```
 
 3. (Optional) Install CUDA toolkit for Phase 2 development:
