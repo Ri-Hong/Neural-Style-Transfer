@@ -10,6 +10,14 @@ Implementation of Neural Style Transfer based on [Aldo Ferlatti's article](https
 - FastAPI service for image processing
 - React frontend for easy experimentation
 
+## Example Output
+
+Here's an example of applying Van Gogh's "Starry Night" style to a landscape image:
+
+| Content Image                              | Style Image                                 | Output                                                  |
+| ------------------------------------------ | ------------------------------------------- | ------------------------------------------------------- |
+| ![Content](/examples/images/landscape.jpg) | ![Style](/examples/images/starry_night.jpg) | ![Output](/examples/outputs/landscape_starry_night.png) |
+
 ## Setup
 
 1. Create a Python virtual environment:
