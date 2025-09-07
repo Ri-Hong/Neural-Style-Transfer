@@ -126,6 +126,9 @@ def show_images(content_img, style_img, output_img):
     plt.tight_layout()
     plt.show()
 
+# Global flag to track if we've printed the implementation message
+_gram_matrix_message_printed = False
+
 def gram_matrix(tensor):
     """Calculate Gram Matrix of a given tensor.
     
@@ -138,15 +141,25 @@ def gram_matrix(tensor):
     Returns:
         torch.Tensor: Gram matrix of shape (batch_size, channels, channels)
     """
+    global _gram_matrix_message_printed
+    
+    if not _gram_matrix_message_printed:
+        if tensor.is_cuda:
+            try:
+                import gram_cuda
+                print("\033[32m✓ Using custom CUDA Gram matrix implementation\033[0m")  # Green text
+            except ImportError:
+                print("\033[33m⚠ CUDA extension not found, falling back to PyTorch implementation\033[0m")  # Yellow text
+        else:
+            print("\033[34mℹ Using PyTorch CPU implementation for Gram matrix\033[0m")  # Blue text
+        _gram_matrix_message_printed = True
+    
     if tensor.is_cuda:
         try:
             import gram_cuda
-            print("\033[32m✓ Using custom CUDA Gram matrix implementation\033[0m")  # Green text
             return gram_cuda.gram_matrix_cuda(tensor)
         except ImportError:
-            print("\033[33m⚠ CUDA extension not found, falling back to PyTorch implementation\033[0m")  # Yellow text
-    else:
-        print("\033[34mℹ Using PyTorch CPU implementation for Gram matrix\033[0m")  # Blue text
+            pass
     
     batch_size, channels, height, width = tensor.size()
     
