@@ -13,29 +13,58 @@ __global__ void gram_matrix_kernel(
     const int channels,
     const int hw_size  // H*W
 ) {
+    // Shared memory for tile of input features
+    extern __shared__ float shared_mem[];
+
     // Get thread indices
-    const int b = blockIdx.x;   // batch index
-    const int i = blockIdx.y;   // row index
-    const int j = threadIdx.x;  // column index
+    const int b = blockIdx.x;    // batch index
+    const int i = blockIdx.y;    // row index
+    const int tx = threadIdx.x;  // thread index within block
 
-    if (i >= channels || j >= channels) return;
+    if (i >= channels) return;
 
-    // Calculate offset for current batch
+    // Calculate offsets
     const int batch_offset = b * channels * channels;
     const int input_batch_offset = b * channels * hw_size;
 
-    // Compute dot product between i-th and j-th channels
-    float sum = 0.0f;
-    for (int k = 0; k < hw_size; k++) {
-        sum += input[input_batch_offset + i * hw_size + k] *
-               input[input_batch_offset + j * hw_size + k];
+    // Each thread accumulates partial dot products
+    float sum[32] = {0.0f};  // Support up to 32 columns per thread
+    const int cols_per_thread = (channels + blockDim.x - 1) / blockDim.x;
+
+    // Process input in tiles
+    const int TILE_SIZE = blockDim.x;
+    for (int tile = 0; tile < hw_size; tile += TILE_SIZE) {
+        // Load tile into shared memory
+        if (tile + tx < hw_size) {
+            shared_mem[tx] = input[input_batch_offset + i * hw_size + tile + tx];
+        } else {
+            shared_mem[tx] = 0.0f;
+        }
+        __syncthreads();
+
+        // Each thread processes multiple columns
+        for (int j = 0; j < cols_per_thread; j++) {
+            const int col = tx * cols_per_thread + j;
+            if (col < channels) {
+                // Load column data
+                float col_val = 0.0f;
+                if (tile + tx < hw_size) {
+                    col_val = input[input_batch_offset + col * hw_size + tile + tx];
+                }
+                // Multiply with row data from shared memory
+                sum[j] += shared_mem[tx] * col_val;
+            }
+        }
+        __syncthreads();
     }
 
-    // Normalize by total elements
-    sum /= (channels * hw_size);
-
-    // Write result to output
-    output[batch_offset + i * channels + j] = sum;
+    // Write results to output
+    for (int j = 0; j < cols_per_thread; j++) {
+        const int col = tx * cols_per_thread + j;
+        if (col < channels) {
+            output[batch_offset + i * channels + col] = sum[j] / (channels * hw_size);
+        }
+    }
 }
 
 // C++ implementation of forward pass
@@ -52,11 +81,13 @@ void gram_matrix_cuda_forward(
     // Reshape input to (B, C, H*W)
     auto input_reshaped = input.view({batch_size, channels, hw_size});
 
-    // Launch kernel
+    // Configure kernel launch parameters
+    const int BLOCK_SIZE = 256;  // Use larger thread blocks
     const dim3 blocks(batch_size, channels);
-    const int threads = channels;
+    const int shared_mem_size = BLOCK_SIZE * sizeof(float);
 
-    gram_matrix_kernel<<<blocks, threads>>>(
+    // Launch kernel
+    gram_matrix_kernel<<<blocks, BLOCK_SIZE, shared_mem_size>>>(
         input_reshaped.data_ptr<float>(),
         output.data_ptr<float>(),
         batch_size,
