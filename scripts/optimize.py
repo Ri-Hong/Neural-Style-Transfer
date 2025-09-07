@@ -49,7 +49,7 @@ project_root = str(Path(__file__).parent.parent)
 sys.path.append(project_root)
 
 from src.style_transfer import NeuralStyleTransfer
-from src.utils.image_utils import load_image, save_image, show_images
+from src.utils.image_utils import load_image, save_image, show_images, set_use_custom_cuda
 
 def main():
     # Parse arguments
@@ -68,18 +68,21 @@ def main():
                       help='Number of optimization steps')
     parser.add_argument('--max-size', type=int, default=512,
                       help='Maximum size of the larger image dimension')
-    parser.add_argument('--use-cuda', action='store_true',
-                      help='Use CUDA if available')
+    parser.add_argument('--use-custom-cuda', action='store_true',
+                      help='Use custom CUDA implementation for Gram matrix computation')
     args = parser.parse_args()
 
-    # Set device
-    if args.use_cuda and torch.cuda.is_available():
+    # Automatically detect best available device
+    if torch.cuda.is_available():
         device = torch.device('cuda')
     elif torch.backends.mps.is_available():
         device = torch.device('mps')
     else:
         device = torch.device('cpu')
     print(f'Using device: {device}')
+    
+    # Set whether to use custom CUDA implementation
+    set_use_custom_cuda(args.use_custom_cuda)
 
     # Create output directory if needed
     output_dir = os.path.dirname(args.output)
