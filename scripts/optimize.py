@@ -51,7 +51,22 @@ sys.path.append(project_root)
 from src.style_transfer import NeuralStyleTransfer
 from src.utils.image_utils import load_image, save_image, show_images, set_use_custom_cuda
 
+def build_cuda_extension():
+    """Build the custom CUDA extension if CUDA is available."""
+    if torch.cuda.is_available():
+        try:
+            import subprocess
+            import os
+            cuda_dir = os.path.join(project_root, 'src', 'cuda_ops')
+            subprocess.check_call(['python', 'setup.py', 'install'], cwd=cuda_dir)
+            print("\033[32m✓ Successfully built CUDA extension\033[0m")
+        except Exception as e:
+            print(f"\033[33m⚠ Failed to build CUDA extension: {e}\033[0m")
+
 def main():
+    # Build CUDA extension if needed
+    build_cuda_extension()
+    
     # Parse arguments
     parser = argparse.ArgumentParser(description='Neural Style Transfer')
     parser.add_argument('--content', type=str, required=True,
