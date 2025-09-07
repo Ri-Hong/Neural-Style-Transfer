@@ -32,8 +32,11 @@ ENV/
 *.swo
 
 # Project specific
-data/
-outputs/
+/data/*
+!/data/.gitkeep
+!/examples/images/
+!/examples/outputs/
+/outputs/
 .env
 wandb/
 
