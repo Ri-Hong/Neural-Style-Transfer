@@ -141,9 +141,12 @@ def gram_matrix(tensor):
     if tensor.is_cuda:
         try:
             import gram_cuda
+            print("\033[32m✓ Using custom CUDA Gram matrix implementation\033[0m")  # Green text
             return gram_cuda.gram_matrix_cuda(tensor)
         except ImportError:
-            print("CUDA extension not found, falling back to PyTorch implementation")
+            print("\033[33m⚠ CUDA extension not found, falling back to PyTorch implementation\033[0m")  # Yellow text
+    else:
+        print("\033[34mℹ Using PyTorch CPU implementation for Gram matrix\033[0m")  # Blue text
     
     batch_size, channels, height, width = tensor.size()
     
