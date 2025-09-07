@@ -1,6 +1,14 @@
 # Neural Style Transfer
 
-Real-time neural style transfer implementation using PyTorch with CUDA optimization.
+Implementation of Neural Style Transfer based on [Aldo Ferlatti's article](https://medium.com/@ferlatti.aldo/neural-style-transfer-nst-theory-and-implementation-c26728cf969d), using PyTorch with a two-phase development approach: CPU implementation followed by CUDA optimization.
+
+## Features
+
+- Optimization-based Neural Style Transfer using VGG19
+- CPU implementation with vectorization and caching optimizations
+- CUDA acceleration with custom Gram matrix kernel (Phase 2)
+- FastAPI service for image processing
+- React frontend for easy experimentation
 
 ## Setup
 
@@ -17,7 +25,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-3. (Optional) Install CUDA toolkit if you plan to develop custom CUDA kernels:
+3. (Optional) Install CUDA toolkit for Phase 2 development:
 
 - Download from [NVIDIA CUDA Toolkit](https://developer.nvidia.com/cuda-downloads)
 - Follow installation instructions for your OS
@@ -26,25 +34,63 @@ pip install -r requirements.txt
 
 ```
 style-transfer/
-├── configs/          # Training/inference configs
-├── data/            # Dataset storage (gitignored)
+├── configs/          # Configuration files
+├── data/            # Example images (gitignored)
 ├── src/
-│   ├── models/      # Neural network architectures
-│   └── losses/      # Loss functions and VGG network
-├── cuda_ops/        # Custom CUDA kernels
+│   ├── models/      # VGG19 feature extractor
+│   └── utils/       # Image and Gram matrix utilities
+│   └── style_transfer.py  # Main NST implementation
+├── cuda_ops/        # CUDA optimizations (Phase 2)
 ├── api/             # FastAPI service
 ├── web/             # React frontend
 ├── tests/           # Unit tests
-└── scripts/         # Utility scripts
+└── scripts/         # Optimization and benchmark scripts
+```
+
+## Usage
+
+### Phase 1 (CPU)
+
+1. Style Transfer:
+
+```bash
+python scripts/optimize.py --content path/to/content.jpg --style path/to/style.jpg
+```
+
+2. Run API Service:
+
+```bash
+uvicorn api.app:app --reload
+```
+
+### Phase 2 (CUDA)
+
+1. Build CUDA extensions:
+
+```bash
+cd cuda_ops && python setup.py install
+```
+
+2. Run with GPU acceleration:
+
+```bash
+python scripts/optimize.py --content path/to/content.jpg --style path/to/style.jpg --use-cuda
 ```
 
 ## Development
 
-- Training: TBD
-- Inference: TBD
-- API Service: TBD
-- Web Demo: TBD
+### Phase 1 (CPU Implementation)
 
-## License
+- VGG19 feature extraction
+- Content and style loss computation
+- Basic optimization loop
+- CPU-based optimizations
+- FastAPI service
 
-MIT
+### Phase 2 (CUDA Optimization)
+
+- Custom CUDA Gram matrix kernel
+- GPU acceleration
+- Batch processing
+- Performance optimizations
+- React frontend
