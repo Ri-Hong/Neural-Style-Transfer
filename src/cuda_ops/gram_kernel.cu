@@ -1,6 +1,9 @@
-#include <cuda.h>
-#include <cuda_runtime.h>
 #include <torch/extension.h>
+
+// CUDA declarations
+void gram_matrix_cuda_forward(
+    const torch::Tensor& input,
+    torch::Tensor& output);
 
 // CUDA kernel for computing Gram matrix
 __global__ void gram_matrix_kernel(
@@ -35,8 +38,10 @@ __global__ void gram_matrix_kernel(
     output[batch_offset + i * channels + j] = sum;
 }
 
-// C++ wrapper for the CUDA kernel
-torch::Tensor gram_matrix_cuda(torch::Tensor input) {
+// C++ implementation of forward pass
+void gram_matrix_cuda_forward(
+    const torch::Tensor& input,
+    torch::Tensor& output) {
     // Get tensor dimensions
     const auto batch_size = input.size(0);
     const auto channels = input.size(1);
@@ -46,10 +51,6 @@ torch::Tensor gram_matrix_cuda(torch::Tensor input) {
 
     // Reshape input to (B, C, H*W)
     auto input_reshaped = input.view({batch_size, channels, hw_size});
-
-    // Create output tensor
-    auto output = torch::zeros({batch_size, channels, channels},
-                               input.options());
 
     // Launch kernel
     const dim3 blocks(batch_size, channels);
@@ -61,6 +62,9 @@ torch::Tensor gram_matrix_cuda(torch::Tensor input) {
         batch_size,
         channels,
         hw_size);
+}
 
-    return output;
+// Python bindings
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+    m.def("gram_matrix_cuda_forward", &gram_matrix_cuda_forward, "Gram matrix forward (CUDA)");
 }

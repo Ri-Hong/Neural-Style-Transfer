@@ -164,7 +164,12 @@ def gram_matrix(tensor):
     if tensor.is_cuda and _use_custom_cuda:
         try:
             import gram_cuda
-            return gram_cuda.gram_matrix_cuda(tensor)
+            # Create output tensor
+            output = torch.zeros(tensor.size(0), tensor.size(1), tensor.size(1),
+                               device=tensor.device, dtype=tensor.dtype)
+            # Call CUDA implementation
+            gram_cuda.gram_matrix_cuda_forward(tensor, output)
+            return output
         except ImportError:
             pass
     
