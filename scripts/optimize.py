@@ -13,17 +13,17 @@ Features:
    --style-weight: How much to apply style (default: 1e5)
    --steps: Number of optimization steps (default: 500)
    --max-size: Maximum image dimension (default: 512)
-   --use-cuda: Whether to use GPU acceleration
+   --use-custom-cuda: Whether to use our custom CUDA implementation
 
 Example Usage:
     # Basic usage
     python optimize.py --content photo.jpg --style painting.jpg
 
-    # Advanced usage
+    # Advanced usage with custom CUDA
     python optimize.py --content photo.jpg --style painting.jpg \\
                       --output result.png --steps 1000 \\
                       --content-weight 1.5 --style-weight 2e5 \\
-                      --max-size 1024 --use-cuda
+                      --max-size 1024 --use-custom-cuda
 
 The script will:
 1. Load and preprocess both images
@@ -35,7 +35,7 @@ Note:
 - Larger --max-size means better quality but slower processing
 - More --steps generally gives better results but takes longer
 - Adjust weights to control content/style balance
-- Use --use-cuda if you have a GPU for faster processing
+- Use --use-custom-cuda to enable our optimized CUDA implementation
 """
 
 import argparse
@@ -57,17 +57,28 @@ def build_cuda_extension():
         try:
             import subprocess
             import os
+            import sys
+            import importlib
+
+            # Build the extension
             cuda_dir = os.path.join(project_root, 'src', 'cuda_ops')
             subprocess.check_call(['python', 'setup.py', 'install'], cwd=cuda_dir)
-            print("\033[32m✓ Successfully built CUDA extension\033[0m")
+            
+            # Force Python to reload modules to pick up the new extension
+            if 'gram_cuda' in sys.modules:
+                del sys.modules['gram_cuda']
+            
+            # Try importing to verify installation
+            import gram_cuda
+            print("\033[32m✓ Successfully built and verified CUDA extension\033[0m")
+            return True
         except Exception as e:
-            print(f"\033[33m⚠ Failed to build CUDA extension: {e}\033[0m")
+            print(f"\033[33m⚠ Failed to build/verify CUDA extension: {e}\033[0m")
+            return False
+    return False
 
 def main():
-    # Build CUDA extension if needed
-    build_cuda_extension()
-    
-    # Parse arguments
+    # Parse arguments first so we know if we need CUDA
     parser = argparse.ArgumentParser(description='Neural Style Transfer')
     parser.add_argument('--content', type=str, required=True,
                       help='Path to content image')
@@ -87,6 +98,14 @@ def main():
                       help='Use custom CUDA implementation for Gram matrix computation')
     args = parser.parse_args()
 
+    # Build CUDA extension only if requested
+    cuda_available = False
+    if args.use_custom_cuda:
+        cuda_available = build_cuda_extension()
+    
+    # Set whether to use custom CUDA implementation
+    set_use_custom_cuda(cuda_available)
+
     # Automatically detect best available device
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -95,9 +114,6 @@ def main():
     else:
         device = torch.device('cpu')
     print(f'Using device: {device}')
-    
-    # Set whether to use custom CUDA implementation
-    set_use_custom_cuda(args.use_custom_cuda)
 
     # Create output directory if needed
     output_dir = os.path.dirname(args.output)
